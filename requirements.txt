@@ -1,9 +1,10 @@
 streamlit
-tensorflow==2.16.1
-numpy==1.26.4
-pandas
-matplotlib
+inference-sdk
 opencv-python-headless
 pillow
+numpy
+tensorflow==2.16.1
+protobuf==4.25.3
 scikit-learn
-h5py
+matplotlib
+seaborn
