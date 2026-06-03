@@ -1,0 +1,10 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+dataset/
+
+output/confusion_matrix.png
+output/training_history.png
+output/training_log_*.csv
