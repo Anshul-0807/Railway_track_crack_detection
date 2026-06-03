@@ -1,9 +1,8 @@
 streamlit
+keras>=3.0.0
+numpy
 opencv-python-headless
 pillow
-numpy
-tensorflow==2.16.1
-protobuf==4.25.3
 scikit-learn
 matplotlib
 seaborn

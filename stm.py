@@ -355,8 +355,12 @@ or non-defective with high accuracy.
 @st.cache_resource(show_spinner=False)
 def load_model(path: str):
     try:
-        import tensorflow as tf
-        from tensorflow.keras.layers import (
+        try:
+            import tensorflow as tf
+            keras = tf.keras
+        except ImportError:
+            import keras
+        from keras.layers import (
             BatchNormalization, Dense, DepthwiseConv2D, Conv2D
         )
 
@@ -382,7 +386,7 @@ def load_model(path: str):
                 kwargs.pop('quantization_config', None)
                 super().__init__(**kwargs)
 
-        model = tf.keras.models.load_model(
+        model = keras.models.load_model(
             path,
             custom_objects={
                 'BatchNormalization': FixedBatchNorm,
