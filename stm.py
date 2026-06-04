@@ -437,6 +437,57 @@ def predict(model, pil_image: Image.Image):
     result_pil = Image.fromarray(cv2.cvtColor(orig_cv, cv2.COLOR_BGR2RGB))
     return label, confidence, result_pil, float(raw)
 
+# ── Railway track relevance checker ─────────────────────────────────────────
+@st.cache_resource(show_spinner=False)
+def load_imagenet_classifier():
+    try:
+        import tensorflow as tf
+        model = tf.keras.applications.MobileNetV2(weights='imagenet')
+        return model
+    except Exception:
+        return None
+
+RAILWAY_KEYWORDS = {
+    'rail', 'track', 'railway', 'railroad', 'train', 'locomotive',
+    'steel', 'iron', 'gravel', 'ballast', 'sleeper', 'tie',
+    'freight', 'subway', 'metro', 'platform', 'station',
+    'wreck', 'rust', 'metal', 'structure', 'beam', 'bridge',
+    'road', 'path', 'ground', 'surface', 'pavement', 'lane',
+    'stone', 'rock', 'pebble', 'gravel_pit', 'cliff',
+}
+
+def is_railway_track(pil_image):
+    """Returns (is_relevant: bool, reason: str)"""
+    classifier = load_imagenet_classifier()
+    if classifier is None:
+        return True, ""
+
+    try:
+        import tensorflow as tf
+        img = pil_image.resize((224, 224)).convert("RGB")
+        arr = tf.keras.applications.mobilenet_v2.preprocess_input(
+            np.expand_dims(np.array(img, dtype=np.float32), 0)
+        )
+        preds = classifier.predict(arr, verbose=0)
+        decoded = tf.keras.applications.mobilenet_v2.decode_predictions(preds, top=5)[0]
+
+        top_labels = [label.lower().replace(' ', '_') for (_, label, _) in decoded]
+        top_scores = [float(score) for (_, _, score) in decoded]
+
+        for label, score in zip(top_labels, top_scores):
+            for keyword in RAILWAY_KEYWORDS:
+                if keyword in label:
+                    return True, f"Detected: {label} ({score*100:.1f}%)"
+
+        if top_scores[0] < 0.4:
+            return True, "Ambiguous image — passing to railway model"
+
+        best = f"{top_labels[0]} ({top_scores[0]*100:.1f}%)"
+        return False, best
+
+    except Exception:
+        return True, ""
+
 # ── How to use ────────────────────────────────────────────────────────────────
 with st.expander("📖  How to Use This System", expanded=False):
     st.markdown("""
@@ -504,6 +555,24 @@ else:
     run_btn = st.button("🔍  Run Detection", type="primary")
 
     if run_btn:
+        # ── Relevance check ───────────────────────────────────────────────────
+        with st.spinner("Checking image relevance…"):
+            relevant, reason = is_railway_track(pil_image)
+
+        if not relevant:
+            st.markdown(f"""
+            <div class="status-warn">
+                <div class="icon">🚫</div>
+                <div>
+                    <div class="title">Irrelevant Image Detected</div>
+                    <div class="sub">This does not appear to be a railway track image.
+                    ImageNet classifier identified it as: <strong>{reason}</strong>.
+                    Please upload a railway track image for accurate detection.</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+
         with st.spinner("Running inference on image…"):
             label, confidence, annotated, raw_val = predict(model, pil_image)
 
